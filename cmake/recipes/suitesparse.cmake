@@ -13,8 +13,20 @@ if(WIN32 AND NOT BLA_VENDOR)
     set(BLA_VENDOR OpenBLAS)
 endif()
 
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
+# If BLAS_LIBRARIES is already set (e.g., from command line), skip find_package
+if(BLAS_LIBRARIES)
+    message(STATUS "Using pre-set BLAS_LIBRARIES: ${BLAS_LIBRARIES}")
+    set(BLAS_FOUND TRUE)
+else()
+    find_package(BLAS REQUIRED)
+endif()
+
+if(LAPACK_LIBRARIES)
+    message(STATUS "Using pre-set LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
+    set(LAPACK_FOUND TRUE)
+else()
+    find_package(LAPACK REQUIRED)
+endif()
 
 # Create imported targets if they don't exist (CMake < 3.18 compatibility)
 if(NOT TARGET BLAS::BLAS)

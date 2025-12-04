@@ -66,8 +66,14 @@ jobs:
             Remove-Item -Path $SubDir.FullName -Force -Recurse
           }
           
-          # Set CMAKE_PREFIX_PATH for CMake to find OpenBLAS
+          # Debug: Show directory structure
+          Write-Host "OpenBLAS directory contents:"
+          Get-ChildItem -Path $OpenBLAS_DIR -Recurse | Select-Object FullName
+          
+          # Set environment variables for CMake to find OpenBLAS
           echo "CMAKE_PREFIX_PATH=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "OpenBLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "OPENBLAS_DIR=$OpenBLAS_DIR" >> $env:GITHUB_ENV
 
       # Configure CMake
       - name: Configure CMake (Unix)
@@ -82,7 +88,9 @@ jobs:
         run: |
           cmake -B build `
             -G "${{ matrix.cmake_generator }}" `
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBLAS_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib" `
+            -DLAPACK_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib"
 
       # Build
       - name: Build
