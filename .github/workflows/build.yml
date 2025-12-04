@@ -39,13 +39,30 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libomp-dev
+          sudo apt-get install -y libomp-dev libopenblas-dev liblapack-dev
 
       # macOS dependencies (Accelerate provides BLAS/LAPACK)
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install libomp
+
+      # Windows dependencies (OpenBLAS provides BLAS/LAPACK)
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Download and extract OpenBLAS
+          $OpenBLAS_VERSION = "0.3.28"
+          $OpenBLAS_URL = "https://github.com/OpenMathLib/OpenBLAS/releases/download/v${OpenBLAS_VERSION}/OpenBLAS-${OpenBLAS_VERSION}-x64.zip"
+          $OpenBLAS_DIR = "C:\OpenBLAS"
+          
+          Invoke-WebRequest -Uri $OpenBLAS_URL -OutFile openblas.zip
+          Expand-Archive -Path openblas.zip -DestinationPath $OpenBLAS_DIR -Force
+          
+          # Set environment variables for CMake
+          echo "OpenBLAS_HOME=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "BLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "LAPACK_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
 
       # Configure CMake
       - name: Configure CMake (Unix)

@@ -7,6 +7,9 @@ endif()
 
 include(FetchContent)
 
+# Add custom find modules path
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/find)
+
 # Find BLAS and LAPACK (required by SuiteSparse)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
