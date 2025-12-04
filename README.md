@@ -37,9 +37,11 @@ brew install cmake libomp
 **Windows:**
 - Visual Studio 2022 with C++ workload
 - CMake (bundled with VS or standalone)
+- OpenBLAS (see Windows build instructions below)
 
 ### Build
 
+**Linux/macOS:**
 ```bash
 # Clone the repository
 git clone https://github.com/BehroozZare/suitesparse-cmake-recipe.git
@@ -51,6 +53,45 @@ cmake --build build --config Release --parallel
 
 # Run the demo
 ./build/cholmod_demo data/matrix.mtx
+```
+
+**Windows (PowerShell):**
+```powershell
+# Clone the repository
+git clone https://github.com/BehroozZare/suitesparse-cmake-recipe.git
+cd suitesparse-cmake-recipe
+
+# Download and extract OpenBLAS
+$OpenBLAS_VERSION = "0.3.28"
+$OpenBLAS_URL = "https://github.com/OpenMathLib/OpenBLAS/releases/download/v${OpenBLAS_VERSION}/OpenBLAS-${OpenBLAS_VERSION}-x64.zip"
+$OpenBLAS_DIR = "C:\OpenBLAS"
+
+Invoke-WebRequest -Uri $OpenBLAS_URL -OutFile openblas.zip
+Expand-Archive -Path openblas.zip -DestinationPath $OpenBLAS_DIR -Force
+
+# Move contents from versioned subdirectory to parent
+$SubDir = Get-ChildItem -Path $OpenBLAS_DIR -Directory | Select-Object -First 1
+if ($SubDir) {
+  Move-Item -Path "$($SubDir.FullName)\*" -Destination $OpenBLAS_DIR -Force
+  Remove-Item -Path $SubDir.FullName -Force -Recurse
+}
+
+# Set paths (adjust if your OpenBLAS structure differs)
+$OPENBLAS_LIB = (Get-ChildItem -Path $OpenBLAS_DIR -Recurse -Filter "*openblas*.lib" | Select-Object -First 1).FullName
+$OPENBLAS_INCLUDE = (Get-ChildItem -Path $OpenBLAS_DIR -Recurse -Directory -Filter "include" | Select-Object -First 1).FullName
+
+# Configure and build with Visual Studio 2022
+cmake -B build `
+  -G "Visual Studio 17 2022" `
+  -DCMAKE_BUILD_TYPE=Release `
+  -DBLAS_LIBRARIES="$OPENBLAS_LIB" `
+  -DLAPACK_LIBRARIES="$OPENBLAS_LIB" `
+  -DOPENBLAS_INCLUDE_DIR="$OPENBLAS_INCLUDE"
+
+cmake --build build --config Release --parallel
+
+# Run the demo
+.\build\Release\cholmod_demo.exe data\matrix.mtx
 ```
 
 ## Project Structure
