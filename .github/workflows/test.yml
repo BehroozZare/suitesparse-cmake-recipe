@@ -79,12 +79,16 @@ jobs:
             -G "${{ matrix.cmake_generator }}" \
             -DCMAKE_BUILD_TYPE=Release
 
+      # Note: Explicitly pass BLAS/LAPACK paths to avoid CMake building OpenBLAS from source
+      # which causes export issues with SuiteSparse
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         run: |
           cmake -B build `
             -G "${{ matrix.cmake_generator }}" `
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBLAS_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib" `
+            -DLAPACK_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib"
 
       - name: Build
         run: cmake --build build --config Release --parallel

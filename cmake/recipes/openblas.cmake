@@ -1,6 +1,7 @@
 # BLAS/LAPACK recipe: find installed or download and build OpenBLAS
 #
 # This recipe searches for BLAS/LAPACK in the following order:
+# 0. Pre-set BLAS_LIBRARIES/LAPACK_LIBRARIES (command line override)
 # 1. Intel OneAPI MKL (optimized for Intel processors)
 # 2. OpenBLAS (system-installed)
 # 3. Any other system BLAS/LAPACK
@@ -14,17 +15,30 @@ set(BLAS_FOUND FALSE)
 set(LAPACK_FOUND FALSE)
 
 # =============================================================================
+# Step 0: Check for pre-set BLAS/LAPACK libraries (command line override)
+# =============================================================================
+if(BLAS_LIBRARIES AND LAPACK_LIBRARIES)
+    message(STATUS "Using pre-set BLAS_LIBRARIES: ${BLAS_LIBRARIES}")
+    message(STATUS "Using pre-set LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
+    set(BLAS_FOUND TRUE)
+    set(LAPACK_FOUND TRUE)
+    set(BLAS_VENDOR_FOUND "Pre-set")
+endif()
+
+# =============================================================================
 # Step 1: Try Intel OneAPI MKL first (best performance on Intel processors)
 # =============================================================================
-message(STATUS "Searching for Intel OneAPI MKL...")
-set(BLA_VENDOR Intel10_64lp)
-find_package(BLAS QUIET)
-find_package(LAPACK QUIET)
-
-if(BLAS_FOUND AND LAPACK_FOUND)
-    message(STATUS "Found Intel MKL BLAS: ${BLAS_LIBRARIES}")
-    message(STATUS "Found Intel MKL LAPACK: ${LAPACK_LIBRARIES}")
-    set(BLAS_VENDOR_FOUND "Intel MKL")
+if(NOT BLAS_FOUND OR NOT LAPACK_FOUND)
+    message(STATUS "Searching for Intel OneAPI MKL...")
+    set(BLA_VENDOR Intel10_64lp)
+    find_package(BLAS QUIET)
+    find_package(LAPACK QUIET)
+    
+    if(BLAS_FOUND AND LAPACK_FOUND)
+        message(STATUS "Found Intel MKL BLAS: ${BLAS_LIBRARIES}")
+        message(STATUS "Found Intel MKL LAPACK: ${LAPACK_LIBRARIES}")
+        set(BLAS_VENDOR_FOUND "Intel MKL")
+    endif()
 endif()
 
 # =============================================================================
