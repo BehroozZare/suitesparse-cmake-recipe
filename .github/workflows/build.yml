@@ -68,6 +68,31 @@ jobs:
             Remove-Item -Path $SubDir.FullName -Force -Recurse
           }
           
+          # Debug: List OpenBLAS directory structure
+          Write-Host "=== OpenBLAS Directory Structure ==="
+          Get-ChildItem -Path $OpenBLAS_DIR -Recurse | ForEach-Object { Write-Host $_.FullName }
+          Write-Host "=== End of OpenBLAS Directory Structure ==="
+          
+          # Find the actual library file (could be openblas.lib or libopenblas.lib)
+          $LibFile = Get-ChildItem -Path $OpenBLAS_DIR -Recurse -Filter "*openblas*.lib" | Select-Object -First 1
+          if ($LibFile) {
+            Write-Host "Found OpenBLAS library: $($LibFile.FullName)"
+            echo "OPENBLAS_LIB=$($LibFile.FullName)" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "ERROR: Could not find OpenBLAS library file!"
+            exit 1
+          }
+          
+          # Find include directory
+          $IncludeDir = Get-ChildItem -Path $OpenBLAS_DIR -Recurse -Directory -Filter "include" | Select-Object -First 1
+          if ($IncludeDir) {
+            Write-Host "Found OpenBLAS include dir: $($IncludeDir.FullName)"
+            echo "OPENBLAS_INCLUDE=$($IncludeDir.FullName)" >> $env:GITHUB_ENV
+          } else {
+            # Fallback to root if no include subdir
+            echo "OPENBLAS_INCLUDE=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          }
+          
           # Set environment variables for CMake to find OpenBLAS
           echo "CMAKE_PREFIX_PATH=$OpenBLAS_DIR" >> $env:GITHUB_ENV
           echo "OpenBLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
@@ -86,12 +111,14 @@ jobs:
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         run: |
+          Write-Host "Using OpenBLAS library: $env:OPENBLAS_LIB"
+          Write-Host "Using OpenBLAS include: $env:OPENBLAS_INCLUDE"
           cmake -B build `
             -G "${{ matrix.cmake_generator }}" `
             -DCMAKE_BUILD_TYPE=Release `
-            -DBLAS_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib" `
-            -DLAPACK_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib" `
-            -DOPENBLAS_INCLUDE_DIR="C:/OpenBLAS/include"
+            -DBLAS_LIBRARIES="$env:OPENBLAS_LIB" `
+            -DLAPACK_LIBRARIES="$env:OPENBLAS_LIB" `
+            -DOPENBLAS_INCLUDE_DIR="$env:OPENBLAS_INCLUDE"
 
       # Build
       - name: Build
