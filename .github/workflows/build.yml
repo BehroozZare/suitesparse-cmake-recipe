@@ -59,10 +59,15 @@ jobs:
           Invoke-WebRequest -Uri $OpenBLAS_URL -OutFile openblas.zip
           Expand-Archive -Path openblas.zip -DestinationPath $OpenBLAS_DIR -Force
           
-          # Set environment variables for CMake
-          echo "OpenBLAS_HOME=$OpenBLAS_DIR" >> $env:GITHUB_ENV
-          echo "BLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
-          echo "LAPACK_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          # Move contents from versioned subdirectory to parent
+          $SubDir = Get-ChildItem -Path $OpenBLAS_DIR -Directory | Select-Object -First 1
+          if ($SubDir) {
+            Move-Item -Path "$($SubDir.FullName)\*" -Destination $OpenBLAS_DIR -Force
+            Remove-Item -Path $SubDir.FullName -Force -Recurse
+          }
+          
+          # Set CMAKE_PREFIX_PATH for CMake to find OpenBLAS
+          echo "CMAKE_PREFIX_PATH=$OpenBLAS_DIR" >> $env:GITHUB_ENV
 
       # Configure CMake
       - name: Configure CMake (Unix)

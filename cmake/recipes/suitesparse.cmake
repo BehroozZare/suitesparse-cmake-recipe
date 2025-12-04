@@ -7,14 +7,31 @@ endif()
 
 include(FetchContent)
 
-# Add custom find modules path
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/find)
+# Find BLAS and LAPACK using CMake's built-in modules
+# Set vendor hint for Windows (OpenBLAS)
+if(WIN32 AND NOT BLA_VENDOR)
+    set(BLA_VENDOR OpenBLAS)
+endif()
 
-# Find BLAS and LAPACK (required by SuiteSparse)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
-# Cache BLAS/LAPACK libraries so they're available in parent scope for linking
+# Create imported targets if they don't exist (CMake < 3.18 compatibility)
+if(NOT TARGET BLAS::BLAS)
+    add_library(BLAS::BLAS INTERFACE IMPORTED)
+    set_target_properties(BLAS::BLAS PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${BLAS_LIBRARIES}"
+    )
+endif()
+
+if(NOT TARGET LAPACK::LAPACK)
+    add_library(LAPACK::LAPACK INTERFACE IMPORTED)
+    set_target_properties(LAPACK::LAPACK PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${LAPACK_LIBRARIES}"
+    )
+endif()
+
+# Cache for parent scope access
 set(BLAS_LIBRARIES ${BLAS_LIBRARIES} CACHE STRING "BLAS libraries" FORCE)
 set(LAPACK_LIBRARIES ${LAPACK_LIBRARIES} CACHE STRING "LAPACK libraries" FORCE)
 
@@ -64,16 +81,8 @@ if(NOT suitesparse_POPULATED)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Don't build shared libraries")
     
     # Configure BLAS/LAPACK settings for SuiteSparse
-    # This ensures the lowercase BLAS/LAPACK wrapper macros are defined
     set(SUITESPARSE_USE_SYSTEM_BLAS ON CACHE BOOL "Use system BLAS")
     set(SUITESPARSE_USE_SYSTEM_LAPACK ON CACHE BOOL "Use system LAPACK")
-    set(BLA_VENDOR "Generic" CACHE STRING "BLAS vendor")
-    
-    # Configure BLAS naming convention - critical for wrapper macro definitions
-    # SuiteSparse uses these to define SUITESPARSE_BLAS_dsyrk, etc.
-    # Most modern BLAS libraries use lowercase names with underscores (Fortran convention)
-    set(BLAS_UNDERSCORE ON CACHE BOOL "BLAS names have trailing underscore")
-    set(BLAS_NO_UNDERSCORE OFF CACHE BOOL "BLAS names have no trailing underscore")
     
     # Populate the content
     FetchContent_Populate(suitesparse)

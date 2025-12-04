@@ -44,8 +44,8 @@ target_compile_options(cholmod_demo PRIVATE
 target_link_libraries(cholmod_demo PRIVATE
     SuiteSparse::CHOLMOD
     metis
-    ${BLAS_LIBRARIES}
-    ${LAPACK_LIBRARIES}
+    BLAS::BLAS
+    LAPACK::LAPACK
 )
 
 # Link OpenMP if found
