@@ -7,45 +7,10 @@ endif()
 
 include(FetchContent)
 
-# Find BLAS and LAPACK using CMake's built-in modules
-# Set vendor hint for Windows (OpenBLAS)
-if(WIN32 AND NOT BLA_VENDOR)
-    set(BLA_VENDOR OpenBLAS)
-endif()
-
-# If BLAS_LIBRARIES is already set (e.g., from command line), skip find_package
-if(BLAS_LIBRARIES)
-    message(STATUS "Using pre-set BLAS_LIBRARIES: ${BLAS_LIBRARIES}")
-    set(BLAS_FOUND TRUE)
-else()
-    find_package(BLAS REQUIRED)
-endif()
-
-if(LAPACK_LIBRARIES)
-    message(STATUS "Using pre-set LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
-    set(LAPACK_FOUND TRUE)
-else()
-    find_package(LAPACK REQUIRED)
-endif()
-
-# Create imported targets if they don't exist (CMake < 3.18 compatibility)
-if(NOT TARGET BLAS::BLAS)
-    add_library(BLAS::BLAS INTERFACE IMPORTED)
-    set_target_properties(BLAS::BLAS PROPERTIES
-        INTERFACE_LINK_LIBRARIES "${BLAS_LIBRARIES}"
-    )
-endif()
-
-if(NOT TARGET LAPACK::LAPACK)
-    add_library(LAPACK::LAPACK INTERFACE IMPORTED)
-    set_target_properties(LAPACK::LAPACK PROPERTIES
-        INTERFACE_LINK_LIBRARIES "${LAPACK_LIBRARIES}"
-    )
-endif()
-
-# Cache for parent scope access
-set(BLAS_LIBRARIES ${BLAS_LIBRARIES} CACHE STRING "BLAS libraries" FORCE)
-set(LAPACK_LIBRARIES ${LAPACK_LIBRARIES} CACHE STRING "LAPACK libraries" FORCE)
+# Include OpenBLAS recipe - this provides BLAS::BLAS and LAPACK::LAPACK targets
+# It will first try to find system-installed BLAS/LAPACK, and if not found,
+# will download and build OpenBLAS from source
+include(${CMAKE_CURRENT_LIST_DIR}/openblas.cmake)
 
 # Download SuiteSparse
 FetchContent_Declare(

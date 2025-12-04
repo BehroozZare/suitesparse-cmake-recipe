@@ -34,17 +34,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-test-
 
+      # Ubuntu dependencies (install OpenBLAS - CMake will find it or fall back to building from source)
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libomp-dev libopenblas-dev liblapack-dev
 
+      # macOS dependencies (install OpenBLAS - CMake will find it or fall back to building from source)
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install libomp
+          brew install libomp openblas
+          # Set environment for CMake to find OpenBLAS
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix openblas)" >> $GITHUB_ENV
 
+      # Windows dependencies (install OpenBLAS - CMake will find it or fall back to building from source)
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
@@ -63,8 +68,9 @@ jobs:
             Remove-Item -Path $SubDir.FullName -Force -Recurse
           }
           
-          # Set CMAKE_PREFIX_PATH for CMake to find OpenBLAS
+          # Set environment variables for CMake to find OpenBLAS
           echo "CMAKE_PREFIX_PATH=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "OpenBLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
 
       - name: Configure CMake (Unix)
         if: runner.os != 'Windows'
@@ -111,7 +117,7 @@ jobs:
       - name: Run CHOLMOD factorization test (Windows)
         if: runner.os == 'Windows'
         run: |
-          # Copy OpenBLAS DLL to the executable directory
+          # Copy OpenBLAS DLL to the executable directory (if using system OpenBLAS)
           Copy-Item "C:\OpenBLAS\bin\libopenblas.dll" -Destination "build\Release\" -ErrorAction SilentlyContinue
           
           # Run the test

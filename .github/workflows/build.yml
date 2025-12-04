@@ -34,20 +34,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-
 
-      # Ubuntu dependencies
+      # Ubuntu dependencies (install OpenBLAS - CMake will find it or fall back to building from source)
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libomp-dev libopenblas-dev liblapack-dev
 
-      # macOS dependencies (Accelerate provides BLAS/LAPACK)
+      # macOS dependencies (install OpenBLAS - CMake will find it or fall back to building from source)
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install libomp
+          brew install libomp openblas
+          # Set environment for CMake to find OpenBLAS
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix openblas)" >> $GITHUB_ENV
 
-      # Windows dependencies (OpenBLAS provides BLAS/LAPACK)
+      # Windows dependencies (install OpenBLAS - CMake will find it or fall back to building from source)
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
@@ -66,16 +68,11 @@ jobs:
             Remove-Item -Path $SubDir.FullName -Force -Recurse
           }
           
-          # Debug: Show directory structure
-          Write-Host "OpenBLAS directory contents:"
-          Get-ChildItem -Path $OpenBLAS_DIR -Recurse | Select-Object FullName
-          
           # Set environment variables for CMake to find OpenBLAS
           echo "CMAKE_PREFIX_PATH=$OpenBLAS_DIR" >> $env:GITHUB_ENV
           echo "OpenBLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
-          echo "OPENBLAS_DIR=$OpenBLAS_DIR" >> $env:GITHUB_ENV
 
-      # Configure CMake
+      # Configure CMake (Unix)
       - name: Configure CMake (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -83,14 +80,13 @@ jobs:
             -G "${{ matrix.cmake_generator }}" \
             -DCMAKE_BUILD_TYPE=Release
 
+      # Configure CMake (Windows)
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         run: |
           cmake -B build `
             -G "${{ matrix.cmake_generator }}" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DBLAS_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib" `
-            -DLAPACK_LIBRARIES="C:/OpenBLAS/lib/libopenblas.lib"
+            -DCMAKE_BUILD_TYPE=Release
 
       # Build
       - name: Build
@@ -103,4 +99,3 @@ jobs:
       - name: List build artifacts (Windows)
         if: runner.os == 'Windows'
         run: Get-ChildItem -Path build -Recurse | Select-Object -First 50
-
