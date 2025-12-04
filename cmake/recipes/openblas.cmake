@@ -14,6 +14,9 @@ endif()
 set(BLAS_FOUND FALSE)
 set(LAPACK_FOUND FALSE)
 
+# Optional: Allow user to specify OpenBLAS include directory (for Windows pre-built binaries)
+set(OPENBLAS_INCLUDE_DIR "" CACHE PATH "OpenBLAS include directory (optional, for pre-built binaries)")
+
 # =============================================================================
 # Step 0: Check for pre-set BLAS/LAPACK libraries (command line override)
 # =============================================================================
@@ -23,6 +26,14 @@ if(BLAS_LIBRARIES AND LAPACK_LIBRARIES)
     set(BLAS_FOUND TRUE)
     set(LAPACK_FOUND TRUE)
     set(BLAS_VENDOR_FOUND "Pre-set")
+    
+    # Set include directories for SuiteSparse's SuiteSparseBLAS.cmake
+    # This prevents SuiteSparse from trying to run find_package(BLAS) again
+    if(OPENBLAS_INCLUDE_DIR)
+        set(BLAS_INCLUDE_DIRS "${OPENBLAS_INCLUDE_DIR}" CACHE PATH "BLAS include directories" FORCE)
+        set(LAPACK_INCLUDE_DIRS "${OPENBLAS_INCLUDE_DIR}" CACHE PATH "LAPACK include directories" FORCE)
+        message(STATUS "Using pre-set BLAS_INCLUDE_DIRS: ${BLAS_INCLUDE_DIRS}")
+    endif()
 endif()
 
 # =============================================================================
@@ -174,6 +185,11 @@ else()
         set(BLAS_LIBRARIES openblas_static CACHE STRING "BLAS libraries" FORCE)
         set(LAPACK_LIBRARIES openblas_static CACHE STRING "LAPACK libraries" FORCE)
     endif()
+    
+    # Set include directories for SuiteSparse's SuiteSparseBLAS.cmake
+    # This prevents SuiteSparse from trying to run find_package(BLAS) again
+    set(BLAS_INCLUDE_DIRS "${openblas_SOURCE_DIR}" CACHE PATH "BLAS include directories" FORCE)
+    set(LAPACK_INCLUDE_DIRS "${openblas_SOURCE_DIR}" CACHE PATH "LAPACK include directories" FORCE)
     
     message(STATUS "OpenBLAS will be built from source: ${openblas_SOURCE_DIR}")
 endif()

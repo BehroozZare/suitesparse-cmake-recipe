@@ -47,8 +47,12 @@ if(NOT suitesparse_POPULATED)
     # Disable demo/test builds
     set(SUITESPARSE_DEMOS OFF CACHE BOOL "Disable demos")
     
-    # Use 64-bit integers
-    set(SUITESPARSE_USE_64BIT_BLAS ON CACHE BOOL "Use 64-bit BLAS")
+    # Use 64-bit integers (not on Windows where pre-built OpenBLAS is typically 32-bit)
+    if(WIN32)
+        set(SUITESPARSE_USE_64BIT_BLAS OFF CACHE BOOL "Use 64-bit BLAS" FORCE)
+    else()
+        set(SUITESPARSE_USE_64BIT_BLAS ON CACHE BOOL "Use 64-bit BLAS")
+    endif()
     
     # Disable Fortran if not needed
     set(SUITESPARSE_USE_FORTRAN OFF CACHE BOOL "Disable Fortran")
