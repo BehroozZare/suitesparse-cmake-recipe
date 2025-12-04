@@ -13,12 +13,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
             cmake_generator: "Unix Makefiles"
           - os: macos-latest
             cmake_generator: "Unix Makefiles"
+          - os: windows-latest
+            cmake_generator: "Visual Studio 17 2022"
 
     steps:
       - name: Checkout repository
@@ -36,23 +38,48 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libomp-dev
+          sudo apt-get install -y libomp-dev libopenblas-dev liblapack-dev
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install libomp
 
-      - name: Configure CMake
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Download and extract OpenBLAS
+          $OpenBLAS_VERSION = "0.3.28"
+          $OpenBLAS_URL = "https://github.com/OpenMathLib/OpenBLAS/releases/download/v${OpenBLAS_VERSION}/OpenBLAS-${OpenBLAS_VERSION}-x64.zip"
+          $OpenBLAS_DIR = "C:\OpenBLAS"
+          
+          Invoke-WebRequest -Uri $OpenBLAS_URL -OutFile openblas.zip
+          Expand-Archive -Path openblas.zip -DestinationPath $OpenBLAS_DIR -Force
+          
+          # Set environment variables for CMake
+          echo "OpenBLAS_HOME=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "BLAS_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+          echo "LAPACK_ROOT=$OpenBLAS_DIR" >> $env:GITHUB_ENV
+
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
         run: |
           cmake -B build \
             -G "${{ matrix.cmake_generator }}" \
             -DCMAKE_BUILD_TYPE=Release
 
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B build `
+            -G "${{ matrix.cmake_generator }}" `
+            -DCMAKE_BUILD_TYPE=Release
+
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Run CHOLMOD factorization test
+      - name: Run CHOLMOD factorization test (Unix)
+        if: runner.os != 'Windows'
         run: |
           chmod +x run.sh
           ./run.sh 2>&1 | tee test_output.txt
@@ -76,3 +103,30 @@ jobs:
           echo ""
           echo "=== All tests passed ==="
 
+      - name: Run CHOLMOD factorization test (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Copy OpenBLAS DLL to the executable directory
+          Copy-Item "C:\OpenBLAS\bin\libopenblas.dll" -Destination "build\Release\" -ErrorAction SilentlyContinue
+          
+          # Run the test
+          .\build\Release\cholmod_demo.exe data\matrix.mtx 2>&1 | Tee-Object -FilePath test_output.txt
+          
+          # Check that factorization succeeded
+          if (Select-String -Path test_output.txt -Pattern "Factorization successful!" -Quiet) {
+            Write-Host "✓ Factorization completed successfully"
+          } else {
+            Write-Host "✗ Factorization failed"
+            exit 1
+          }
+          
+          # Check for low residual (SUCCESS message)
+          if (Select-String -Path test_output.txt -Pattern "SUCCESS:" -Quiet) {
+            Write-Host "✓ Residual check passed"
+          } else {
+            Write-Host "✗ Residual too high or test failed"
+            exit 1
+          }
+          
+          Write-Host ""
+          Write-Host "=== All tests passed ==="

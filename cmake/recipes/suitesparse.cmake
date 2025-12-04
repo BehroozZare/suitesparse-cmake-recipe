@@ -14,6 +14,10 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/find)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
+# Cache BLAS/LAPACK libraries so they're available in parent scope for linking
+set(BLAS_LIBRARIES ${BLAS_LIBRARIES} CACHE STRING "BLAS libraries" FORCE)
+set(LAPACK_LIBRARIES ${LAPACK_LIBRARIES} CACHE STRING "LAPACK libraries" FORCE)
+
 # Download SuiteSparse
 FetchContent_Declare(
     suitesparse

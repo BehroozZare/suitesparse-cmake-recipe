@@ -40,9 +40,12 @@ target_compile_options(cholmod_demo PRIVATE
 )
 
 # Link SuiteSparse CHOLMOD and dependencies
+# Note: BLAS/LAPACK must be explicitly linked since CHOLMOD is a static library
 target_link_libraries(cholmod_demo PRIVATE
     SuiteSparse::CHOLMOD
     metis
+    ${BLAS_LIBRARIES}
+    ${LAPACK_LIBRARIES}
 )
 
 # Link OpenMP if found
