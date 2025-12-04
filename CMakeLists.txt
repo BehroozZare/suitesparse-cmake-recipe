@@ -13,7 +13,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 ################################################################################
 
 # Include cmake recipes
-include(${CMAKE_SOURCE_DIR}/cmake/recipes/cli11.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/recipes/metis.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/recipes/suitesparse.cmake)
 
@@ -26,18 +25,24 @@ find_package(OpenMP)
 
 add_executable(cholmod_demo cholmod_demo.cpp)
 
-# C++ compiler flags
+# C++ compiler flags - cross-platform compatible
 target_compile_options(cholmod_demo PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:-D_SCL_SECURE_NO_WARNINGS /openmp:experimental /MP /bigobj>
-    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Release>>:-Wall -m64 -O3 -Wno-unused-function>
-    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-Wall -m64 -O0 -g3 -Wno-unused-function>
+    # MSVC flags
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /MP /bigobj>
+    # GCC flags
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Release>>:-Wall -O3 -Wno-unused-function>
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-Wall -O0 -g -Wno-unused-function>
+    # Clang flags (including AppleClang)
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CONFIG:Release>>:-Wall -O3 -Wno-unused-function>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CONFIG:Debug>>:-Wall -O0 -g -Wno-unused-function>
+    $<$<AND:$<CXX_COMPILER_ID:AppleClang>,$<CONFIG:Release>>:-Wall -O3 -Wno-unused-function>
+    $<$<AND:$<CXX_COMPILER_ID:AppleClang>,$<CONFIG:Debug>>:-Wall -O0 -g -Wno-unused-function>
 )
 
 # Link SuiteSparse CHOLMOD and dependencies
 target_link_libraries(cholmod_demo PRIVATE
     SuiteSparse::CHOLMOD
     metis
-    CLI11::CLI11
 )
 
 # Link OpenMP if found
@@ -52,9 +57,4 @@ target_include_directories(cholmod_demo PRIVATE ${SUITESPARSE_INCLUDE_DIRS})
 target_compile_definitions(cholmod_demo PRIVATE
     $<$<CONFIG:Debug>:DEBUG>
     $<$<CONFIG:Release>:NDEBUG>
-)
-
-# Debug build options
-target_compile_options(cholmod_demo PRIVATE
-    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-O0;-g;-fno-inline>
 )

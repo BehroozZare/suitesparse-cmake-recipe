@@ -1,0 +1,78 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test CHOLMOD (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            cmake_generator: "Unix Makefiles"
+          - os: macos-latest
+            cmake_generator: "Unix Makefiles"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: ${{ runner.os }}-cmake-test-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-test-
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libomp-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -G "${{ matrix.cmake_generator }}" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Run CHOLMOD factorization test
+        run: |
+          chmod +x run.sh
+          ./run.sh 2>&1 | tee test_output.txt
+          
+          # Check that factorization succeeded
+          if grep -q "Factorization successful!" test_output.txt; then
+            echo "✓ Factorization completed successfully"
+          else
+            echo "✗ Factorization failed"
+            exit 1
+          fi
+          
+          # Check for low residual (SUCCESS message)
+          if grep -q "SUCCESS:" test_output.txt; then
+            echo "✓ Residual check passed"
+          else
+            echo "✗ Residual too high or test failed"
+            exit 1
+          fi
+          
+          echo ""
+          echo "=== All tests passed ==="
+
